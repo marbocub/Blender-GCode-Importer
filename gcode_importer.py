@@ -24,6 +24,10 @@ def create_paths(gcode_lines):
     # Create an empty collection to store the paths
     collection = bpy.data.collections.new("Paths")
 
+    current_material = "T0"
+    materials = {}
+    default_line_diameter = 0.2
+
     absolute_coord = True
     absolute_extrude = False
 
@@ -89,7 +93,7 @@ def create_paths(gcode_lines):
                     e = e + coord[3]
 
 
-            if e >= max_e:
+            if e > max_e:
                 # Update the toolhead position and add the point to the curve data
                 point_data.append(toolhead_pos)
                 max_e = e
@@ -101,7 +105,12 @@ def create_paths(gcode_lines):
                     # Create a new curve object
                     curve_data = bpy.data.curves.new("Path", type='CURVE')
                     curve_data.dimensions = '3D'
-                    curve_data.resolution_u = 1
+                    curve_data.resolution_u = 6
+                    curve_data.use_fill_caps = True
+                    curve_data.bevel_depth = default_line_diameter
+                    if not current_material in materials:
+                        materials[current_material] = bpy.data.materials.new(current_material)
+                    curve_data.materials.append(materials[current_material])
 
                     # Create a curve spline and add the toolhead position as a control point
                     curve_spline = curve_data.splines.new('BEZIER')
@@ -111,6 +120,10 @@ def create_paths(gcode_lines):
                         else:
                             curve_spline.bezier_points.add(1)
                             curve_spline.bezier_points[-1].co = point
+                        curve_spline.bezier_points[-1].handle_left = point
+                        curve_spline.bezier_points[-1].handle_right = point
+                        #curve_spline.bezier_points[-1].handle_left_type = 'FREE'
+                        #curve_spline.bezier_points[-1].handle_right_type = 'FREE'
 
                     # Create a new object to hold the curve data
                     curve_object = bpy.data.objects.new("Path", curve_data)
@@ -122,6 +135,8 @@ def create_paths(gcode_lines):
                 
                 # Reset the point data
                 point_data = []
+                if e == max_e:
+                    point_data.append(toolhead_pos)
 
         # Handle mode commands
         elif command == "M82":
@@ -151,6 +166,9 @@ def create_paths(gcode_lines):
                 e = coord[3]
                 max_e = e
 
+        # Handle tool change commands
+        elif command[:1] == "T":
+            current_material = command
 
 def import_gcode(filepath):
     # Load the gcode file
