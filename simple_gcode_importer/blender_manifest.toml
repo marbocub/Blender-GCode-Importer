@@ -1,0 +1,21 @@
+schema_version = "1.0.0"
+
+id = "simple_gcode_importer"
+version = "1.1.0"
+name = "Simple Gcode Importer"
+tagline = "Import Gcode to blender as paths"
+maintainer = "Kevin Nunley"
+type = "add-on"
+
+tags = ["Import-Export", "Pipeline"]
+
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+copyright = ["2023-2025 Kevin Nunley"]
+website = "https://github.com/kmnunley/Blender-GCode-Importer"
+
+[build]
+paths_exclude_pattern = ["/*.gcode", "__pycache__/", "/.git/", "/*.zip", "images/",]
