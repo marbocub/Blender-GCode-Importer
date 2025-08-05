@@ -8,7 +8,7 @@ from bpy.types import Operator
 bl_info = {
     "name": "GCode Importer",
     "author": "Kevin Nunley",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (2, 90, 0),
     "location": "File > Import",
     "description": "Import GCode files and visualize them as 3D models",
@@ -21,8 +21,7 @@ def create_paths(gcode_lines):
     # Initialize the toolhead position and extruder temperature
     toolhead_pos = (0, 0, 0)
 
-    # Create an empty collection to store the paths
-    collection = bpy.data.collections.new("Paths")
+    print("Creating paths...")
 
     absolute_coord = True
     absolute_extrude = False
@@ -51,7 +50,7 @@ def create_paths(gcode_lines):
         return tuple(coord)
 
     # Iterate through the gcode instructions
-    for line in gcode_lines:
+    for i, line in enumerate(gcode_lines):
         # Skip comments
         if line[0] == ";":
             continue
@@ -76,11 +75,12 @@ def create_paths(gcode_lines):
                     toolhead_pos[2] if coord[2] is None else coord[2]
                 )
             else:
-                toolhead_pos = toolhead_pos + (
-                    0 if coord[0] is None else coord[0],
-                    0 if coord[1] is None else coord[1],
-                    0 if coord[2] is None else coord[2]
-                )
+
+                new_pos = []
+                for i in range(3):
+                    offset = coord[i] if coord[i] is not None else 0
+                    new_pos.append(toolhead_pos[i] + offset)
+                toolhead_pos = tuple(new_pos)
 
             if coord[3] is not None:
                 if absolute_extrude:
@@ -101,7 +101,7 @@ def create_paths(gcode_lines):
                     # Create a new curve object
                     curve_data = bpy.data.curves.new("Path", type='CURVE')
                     curve_data.dimensions = '3D'
-                    curve_data.resolution_u = 1
+                    curve_data.use_fill_caps = True
 
                     # Create a curve spline and add the toolhead position as a control point
                     curve_spline = curve_data.splines.new('BEZIER')
@@ -111,6 +111,8 @@ def create_paths(gcode_lines):
                         else:
                             curve_spline.bezier_points.add(1)
                             curve_spline.bezier_points[-1].co = point
+                        curve_spline.bezier_points[-1].handle_left = point
+                        curve_spline.bezier_points[-1].handle_right = point
 
                     # Create a new object to hold the curve data
                     curve_object = bpy.data.objects.new("Path", curve_data)
@@ -118,7 +120,6 @@ def create_paths(gcode_lines):
 
                     # Link the object to the scene and the collection
                     bpy.context.collection.objects.link(curve_object)
-                    collection.objects.link(curve_object)
                 
                 # Reset the point data
                 point_data = []
@@ -132,11 +133,9 @@ def create_paths(gcode_lines):
 
         elif command == "G90":
             absolute_coord = True
-            absolute_extrude = True
 
         elif command == "G91":
             absolute_coord = False
-            absolute_extrude = False
 
         elif command == "G92":
             coord = get_params(params)
