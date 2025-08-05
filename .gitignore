@@ -1,5 +1,4 @@
 *.gcode
-*.zip
 simple_gcode_importer/__pycache__
 .env
 .env.blender
